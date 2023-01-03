@@ -1,0 +1,254 @@
+\documentclass[10pt]{article}
+\textwidth = 6.5in
+\textheight = 9in
+\hoffset=-.75in
+\voffset=-.8in
+
+\usepackage[pass]{geometry}
+%\usepackage[hypertex]{hyperref}
+\usepackage{hyperref}
+\usepackage{lastpage}
+\usepackage{fancyhdr}
+\usepackage{sectsty}
+\usepackage{amsmath}
+%\usepackage{changepage}
+\usepackage{scrextend}
+
+\usepackage{graphicx}
+\graphicspath{ {./images/} }
+
+
+
+\sectionfont{\Large\sf\bfseries}
+\subsectionfont{\large\sf\bfseries}
+
+\pagestyle{fancy}
+% supress normal headings and footters
+\fancyhf{}
+% remove the heading rule
+\renewcommand{\headrulewidth}{0pt}
+
+%\lfoot{{\sf\scriptsize Copyright \copyright\ 2021 John Winans.  All Rights Reserved}\\
+%{\scriptsize\FooterText}}
+\lfoot{\scriptsize\FooterText}
+
+\rfoot{Page \thepage\ of \pageref*{LastPage}}
+
+% Sub-footer that shows the VCS Header in the lfoot defined above
+\ifdefined\GitFileName
+    \newcommand{\FooterText}{\tt \GitFileName\\
+\GitDescription}
+\else
+    \newcommand{\FooterText}{\emph{--UNKNOWN--}}
+\fi
+
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{.51em}
+
+% do not number the sections
+%\setcounter{secnumdepth}{0}
+
+\begin{document}
+%\pagenumbering{gobble}
+
+\title{Memory Hierarchy}
+%\author{John Winans}
+%\date{December 2004}
+%\maketitle
+\thispagestyle{fancy}
+
+\centerline{\Huge\sf\bfseries Storage Systems}
+
+
+
+\section{Two basic types of memory}
+
+\subsection{Read Only Memory (ROM)}
+
+ROM is Non-volatile memory. (Data is retained when the power is turned off.)
+
+\begin{itemize}
+\item Used for things like the system BIOS.
+\item Used to hold all of the code in many embedded systems from microwave ovens to railroad crossing gate controls.
+\end{itemize}
+
+{\em How does the CPU know what to do when the power is turned on?}
+
+
+
+
+\subsection{Random Access Memory (RAM)}
+RAM is Volatile, Read/Write memory. (Data is lost when the power is turned off.)
+
+\begin{itemize}
+\item Used for main system memory. There are two sub-types of RAM:
+\begin{itemize}
+\item SRAM (static): built from latches, it is fast but large, and expensive
+\item DRAM (dynamic): built from tiny capacitors (batteries), slower than SRAM, but is cheaper
+\end{itemize}
+
+\end{itemize}
+
+
+
+
+An Observation: Things can get complicated when trying to save money!
+
+\section{The Memory Hierarchy}
+
+\subsection{Primary System Memory}
+\begin{itemize}
+\item Fast but expensive
+\item Always on-line.  
+\item CPU directly initiates transfers. 
+\item Volatile
+\end{itemize}
+
+\subsubsection{Registers (SRAM)}
+\begin{itemize}
+\item Must run as fast as the CPU.
+\item Physically located inside the CPU.
+\end{itemize}
+
+\subsubsection{Cache (SRAM)}
+\begin{itemize}
+\item Must run as fast as the CPU.
+\item Often, physically located inside the CPU.
+\item Used to keep a copy of recently used main memory ``closer'' to the CPU.
+\end{itemize}
+
+\subsubsection{Main memory (SRAM or DRAM)}
+\begin{itemize}
+\item Can be slower than the CPU.
+\item Physically located in separate ICs connected directly to the CPU.
+\end{itemize}
+
+
+\subsection{Secondary Memory}
+\begin{itemize}
+\item Slower than primary system memory. But cheaper. 
+\item Always on line.
+\item Access times are not uniform. But tend to have known bounds.
+\item Non-Volatile
+\end{itemize}
+
+\subsubsection{Solid state disk SSD (FLASH)}
+\subsubsection{Fixed disk (magnetic platters)}
+
+
+\subsection{Off-Line Memory}
+\begin{itemize}
+\item Slow and cheap.  
+\item Not always on-line.  
+\item Non-Volatile
+\item Initial access times are not uniform (because they rely on humans or robots to connect them.)
+\item These can be very fast once connected.
+\end{itemize}
+
+\subsubsection{USB flash}
+\subsubsection{Jukeboxes (optical disk / magnetic tape)}
+
+
+\subsection{Some Observations}
+
+\begin{itemize}
+\item Program functions should attempt to optimize the use of the registers in its blocks of code.
+
+\item When registers cannot contain all the needed data the data will {\em spill} into the
+	cache/main memory from the registers.
+
+\item When data is exchanged between the cache and memory it is transferred in small 
+	blocks, each called a {\em cache-line}.  Typical cache-line sizes today range from 
+	16-128 bytes but could be any size depending on the application.
+
+\item Typical large, cheap, DRAMs in PCs today are optimized for transferring cache-line-sized 
+	data blocks of 64-bytes.
+\end{itemize}
+
+
+
+
+\section{Locality of Reference}
+
+\subsection{Temporal}
+	Data elements tend to be used again in the near future.
+\subsection{Spatial}
+	Elements in an array or a sequence of instructions. 
+
+\begin{itemize}
+\item When possible, data types that are represented by multiple bytes should be aligned 
+such that it will be known that they will be transferred in a single cache line!
+(On some systems, this even required.)
+\item When possible, multiple data variables expected to be used together should
+be placed into main memory such that they all end up on the same cache line.
+Doing so can GREATLY improve performance.
+\end{itemize}
+
+
+\section{Examples}
+
+
+
+\subsection{SISD}
+Given a system with a 4KB cache with 64-byte lines, which approach of implementing a 
+SISD function to read 10,000 elements of an \verb@int32_t@ array one at-a-time is likely 
+to run the fastest and why?
+
+\begin{itemize}
+\item[a)] In order from element 0 to N.
+\item[b)] In random order.
+\item[c)] In order from element 0 to N, processing all the even elements first, then the odd ones?
+\end{itemize}
+
+Since the total number of bytes to be processed is greater than the size of the cache,
+the cache lines will have to be recycled before the data has all been read.  
+If there are 64-bytes per line and the data elements are 4-bytes each
+then 16 array elements will be read into each cache line when the data
+are read from the main memory.  
+If all 16 elements are not processed before the cache line is recycled then the same 
+data will have to be fetched from the main memory more than once before the
+function has completed.
+
+The only option to ensure that all the array elements in a cache line have been read 
+before it is recycled is option $a$.  (Note that option $c$ guarantees that every
+element of the array has to be loaded from main memory into the cache {\em twice}.) 
+
+
+\subsection{SIMD}
+Given a system with a 4KB cache with 64-byte lines, which approach of implementing a
+SIMD function to read 10,000 elements of an \verb@int32_t@ array one at-a-time is likely 
+to run the fastest and why?
+
+\begin{itemize}
+\item[a)]
+\begin{itemize}
+\item thread 0 reads the first half of all the elements
+\item thread 1 reads the second half of all the elements
+\end{itemize}
+
+\item[b)]
+\begin{itemize}
+\item thread 0 reads all the even numbered elements 
+\item thread 1 reads all the odd numbered elements 
+\end{itemize}
+
+\end{itemize}
+
+
+The goal is to be able to read all the elements while loading them into the cache the least 
+number of times.  Option $b$ will process the elements in groups that will be fetched
+from main memory in order therefore not requiring the cache to recycle a line before
+it is done being used.
+
+
+
+Observation: The same fundamental logic applies to reading blocks of data from disk.
+Typical operating systems (Linux, MacOS, Windows) include a cache that transfers data
+blocks to/from disk that works much the same as the cache does in the CPU!
+
+Be careful if you write a program that uses threads to collaborate on the processing of
+data!
+
+
+\end{document}
